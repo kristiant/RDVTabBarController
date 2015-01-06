@@ -96,6 +96,22 @@
  */
 - (void)setBackgroundSelectedImage:(UIImage *)selectedImage withUnselectedImage:(UIImage *)unselectedImage;
 
+/**
+ * The background image used for tab bar item's selected state.
+ */
+- (UIColor *)backgroundSelectedColour;
+
+/**
+ * The background image used for tab bar item's unselected state.
+ */
+- (UIColor *)backgroundUnselectedColour;
+
+/**
+ * Sets the tab bar item's selected and unselected background images.
+ */
+- (void)setBackgroundSelectedColour:(UIColor *)selectedColour withUnselectedColour:(UIColor *)unselectedColour;
+
+
 #pragma mark - Badge configuration
 
 /**

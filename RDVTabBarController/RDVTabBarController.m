@@ -197,7 +197,7 @@
         CGFloat tabBarHeight = CGRectGetHeight([[weakSelf tabBar] frame]);
         
         if (!tabBarHeight) {
-            tabBarHeight = 49;
+            tabBarHeight = 60;
         }
         
         if (!hidden) {

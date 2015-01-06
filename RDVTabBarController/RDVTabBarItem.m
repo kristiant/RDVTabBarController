@@ -34,6 +34,8 @@
 @property UIImage *selectedBackgroundImage;
 @property UIImage *unselectedImage;
 @property UIImage *selectedImage;
+@property UIColor *unselectedBackgroundColour;
+@property UIColor *selectedBackgroundColour;
 
 @end
 
@@ -61,9 +63,7 @@
 
 - (void)commonInitialization {
     // Setup defaults
-    
-    [self setBackgroundColor:[UIColor clearColor]];
-    
+
     _title = @"";
     _titlePositionAdjustment = UIOffsetZero;
     
@@ -72,20 +72,36 @@
                                        NSFontAttributeName: [UIFont systemFontOfSize:12],
                                        NSForegroundColorAttributeName: [UIColor blackColor],
                                        };
+        _selectedTitleAttributes = @{
+                                     NSFontAttributeName: [UIFont systemFontOfSize:12],
+                                     NSForegroundColorAttributeName: [UIColor whiteColor],
+                                     };
     } else {
 #if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_7_0
         _unselectedTitleAttributes = @{
                                        UITextAttributeFont: [UIFont systemFontOfSize:12],
                                        UITextAttributeTextColor: [UIColor blackColor],
                                        };
+        _unselectedTitleAttributes = @{
+                                       UITextAttributeFont: [UIFont systemFontOfSize:12],
+                                       UITextAttributeTextColor: [UIColor whiteColor],
+                                       };
 #endif
     }
-    
-    _selectedTitleAttributes = [_unselectedTitleAttributes copy];
-    _badgeBackgroundColor = [UIColor redColor];
+    self.backgroundColor = [UIColor clearColor];
     _badgeTextColor = [UIColor whiteColor];
     _badgeTextFont = [UIFont systemFontOfSize:12];
-    _badgePositionAdjustment = UIOffsetZero;
+    _badgePositionAdjustment = UIOffsetMake(-5, 0);
+}
+
+- (void)setSelected:(BOOL)selected {
+    if ([self isSelected]) {
+        [self setBackgroundColor:[self unselectedBackgroundColour]];
+    } else {
+        [self setBackgroundColor:[self selectedBackgroundColour]];
+    }
+
+    [super setSelected:selected];
 }
 
 - (void)drawRect:(CGRect)rect {
@@ -97,6 +113,9 @@
     UIImage *image = nil;
     CGFloat imageStartingY = 0.0f;
     
+
+    CGContextRef context = UIGraphicsGetCurrentContext();
+
     if ([self isSelected]) {
         image = [self selectedImage];
         backgroundImage = [self selectedBackgroundImage];
@@ -105,15 +124,24 @@
         if (!titleAttributes) {
             titleAttributes = [self unselectedTitleAttributes];
         }
+
     } else {
         image = [self unselectedImage];
         backgroundImage = [self unselectedBackgroundImage];
         titleAttributes = [self unselectedTitleAttributes];
+
+        // Draw right divider
+        UIColor *dividerColour = [UIColor colorWithRed:231.f/255 green:231.f/255 blue:231.f/255 alpha:1.0f];
+        CGContextSetFillColorWithColor(context, [dividerColour CGColor]);
+
+        CGFloat dividerWidth = 1.0f;
+        CGFloat dividerHeightPercentage = 0.8f;
+        CGFloat dividerHeight = frameSize.height * dividerHeightPercentage;
+        CGRect dividerRect = CGRectMake(frameSize.width-dividerWidth, (frameSize.height - dividerHeight)/2 , dividerWidth, dividerHeight);
+        CGContextFillRect(context, dividerRect);
     }
     
     imageSize = [image size];
-    
-    CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextSaveGState(context);
     
     [backgroundImage drawInRect:self.bounds];
@@ -130,12 +158,12 @@
         
         if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
             titleSize = [_title boundingRectWithSize:CGSizeMake(frameSize.width, 20)
-                                                    options:NSStringDrawingUsesLineFragmentOrigin
-                                                 attributes:titleAttributes
-                                                    context:nil].size;
-            
-            imageStartingY = roundf((frameSize.height - imageSize.height - titleSize.height) / 2);
-            
+                                             options:NSStringDrawingUsesLineFragmentOrigin
+                                          attributes:titleAttributes
+                                             context:nil].size;
+
+            imageStartingY = frameSize.height/2 + 7.f - imageSize.height; // roundf((frameSize.height - imageSize.height - titleSize.height) / 2);
+
             [image drawInRect:CGRectMake(roundf(frameSize.width / 2 - imageSize.width / 2) +
                                          _imagePositionAdjustment.horizontal,
                                          imageStartingY + _imagePositionAdjustment.vertical,
@@ -145,7 +173,7 @@
             
             [_title drawInRect:CGRectMake(roundf(frameSize.width / 2 - titleSize.width / 2) +
                                           _titlePositionAdjustment.horizontal,
-                                          imageStartingY + imageSize.height + _titlePositionAdjustment.vertical,
+                                          frameSize.height - titleSize.height - 5,
                                           titleSize.width, titleSize.height)
                 withAttributes:titleAttributes];
         } else {
@@ -203,10 +231,10 @@
         }
         
         CGRect badgeBackgroundFrame = CGRectMake(roundf(frameSize.width / 2 + (image.size.width / 2) * 0.9) +
-                                                 [self badgePositionAdjustment].horizontal,
-                                                 textOffset + [self badgePositionAdjustment].vertical,
-                                                 badgeSize.width + 2 * textOffset, badgeSize.height + 2 * textOffset);
-        
+                                                 [self badgePositionAdjustment].horizontal - (textOffset*2),
+                                                 2*textOffset + [self badgePositionAdjustment].vertical,
+                                                 badgeSize.width , badgeSize.height);
+
         if ([self badgeBackgroundColor]) {
             CGContextSetFillColorWithColor(context, [[self badgeBackgroundColor] CGColor]);
             
@@ -227,15 +255,15 @@
                                                   NSForegroundColorAttributeName: [self badgeTextColor],
                                                   NSParagraphStyleAttributeName: badgeTextStyle,
                                                   };
-            
-            [[self badgeValue] drawInRect:CGRectMake(CGRectGetMinX(badgeBackgroundFrame) + textOffset,
-                                                     CGRectGetMinY(badgeBackgroundFrame) + textOffset,
+
+            [[self badgeValue] drawInRect:CGRectMake(CGRectGetMinX(badgeBackgroundFrame),
+                                                     CGRectGetMinY(badgeBackgroundFrame),
                                                      badgeSize.width, badgeSize.height)
-                withAttributes:badgeTextAttributes];
+                           withAttributes:badgeTextAttributes];
         } else {
 #if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_7_0
-            [[self badgeValue] drawInRect:CGRectMake(CGRectGetMinX(badgeBackgroundFrame) + textOffset,
-                                                     CGRectGetMinY(badgeBackgroundFrame) + textOffset,
+            [[self badgeValue] drawInRect:CGRectMake(CGRectGetMinX(badgeBackgroundFrame),
+                                                     CGRectGetMinY(badgeBackgroundFrame),
                                                      badgeSize.width, badgeSize.height)
                                  withFont:[self badgeTextFont]
                             lineBreakMode:NSLineBreakByTruncatingTail
@@ -291,6 +319,19 @@
     if (unselectedImage && (unselectedImage != [self unselectedBackgroundImage])) {
         [self setUnselectedBackgroundImage:unselectedImage];
     }
+}
+
+- (UIColor *)backgroundSelectedColour {
+    return [self selectedBackgroundColour];
+}
+
+- (UIColor *)backgroundUnselectedColour {
+    return [self unselectedBackgroundColour];
+}
+
+- (void)setBackgroundSelectedColour:(UIColor *)selectedColour withUnselectedColour:(UIColor *)unselectedColour {
+    [self setSelectedBackgroundColour:selectedColour];
+    [self setUnselectedBackgroundColour:unselectedColour];
 }
 
 @end
